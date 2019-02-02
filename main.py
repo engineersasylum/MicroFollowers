@@ -17,6 +17,15 @@ import utime
 import urequests
 import sh1106
 
+#Make the changes here
+WIFI_SSID = 'Xperia'
+WIFI_PASSWORD = 'blackfly21'
+INSTAGRAM_ACCESS_TOKEN = '9472412125.679123c.3fb31xxxxxxxxxxxxxxxxxxx' # <----- Get your's from Instagram
+
+#Configuring Instagram API
+uri = 'https://api.instagram.com/v1/users/self/?access_token='
+uri += INSTAGRAM_ACCESS_TOKEN
+
 #configuring I2C
 i2c = I2C(scl=Pin(4), sda=Pin(5), freq=400000)
 display = sh1106.SH1106_I2C(128, 64, i2c, Pin(16), 0x3c)
@@ -26,15 +35,15 @@ display.sleep(False)
 display.fill(0)
 display.text('MicroFollowers', 10, 25, 1)
 display.show()
-utime.sleep_ms(4000)
+#utime.sleep_ms(4000)
 
 #Configuring WIFI
 station = network.WLAN(network.STA_IF)
 station.active(True)
 
 if station.isconnected() != True:
-    station.connect('Xperia','blackfly21')
-    utime.sleep_ms(5000)
+    station.connect(WIFI_SSID, WIFI_PASSWORD)
+    utime.sleep_ms(8000)
     ip = station.ifconfig()
     display.fill(0)
     display.text(ip[0], 10, 25, 1)
@@ -52,24 +61,30 @@ else:
     display.show()
     print(ip)
 
-old_followers = 0
+old_followers = urequests.get(uri)
+old_followers = old_followers.json()
+old_followers = old_followers.get('data').get('counts').get('followed_by')
 extra_followers = 0
 
 #Fetching Instagram API
 while True:
-
-    insta_data = urequests.get('https://api.instagram.com/v1/users/self/?access_token=9472412125.679123c.3fb31b5968414e47b3b02c7b8101d17d')
-    insta_data = insta_data.json()
-    new_followers = insta_data.get('data').get('counts').get('followed_by')
+    new_followers = urequests.get(uri)
+    new_followers = new_followers.json()
+    new_followers = new_followers.get('data').get('counts').get('followed_by')
     print(new_followers)
 
-    extra_followers = int(new_followers) - old_followers
+    extra_followers = int(new_followers) - int(old_followers)
     old_followers = int(new_followers)
 
-    display.fill(0)
-    display.text(str(new_followers) + " " + str(extra_followers), 20, 25, 1)
-    display.show()
+    if extra_followers >= 0:
+        display.fill(0)
+        display.text(str(new_followers) + "  " + str(extra_followers) + "+", 25, 25, 1)
+        display.show()
+
+    else:
+        display.fill(0)
+        display.text(str(new_followers) + "  " + str(extra_followers) + "-", 25, 25, 1)
+        display.show()
 
     utime.sleep_ms(180000)
-
 
